@@ -1,3 +1,4 @@
+import 'package:denomination/database/denomination_data_model.dart';
 import 'package:denomination/routes/routes_names.dart';
 import 'package:denomination/screens/history/denomination_history.dart';
 import 'package:denomination/screens/home/home_screen.dart';
@@ -10,7 +11,8 @@ class Routes {
       case RouteNames.splashScreen:
         return MaterialPageRoute(builder: (_) => const SplashScreen());
       case RouteNames.dashboardScreen:
-        return MaterialPageRoute(builder: (_) => HomeScreen());
+        final args = settings.arguments as DenominationDataModel?;
+        return MaterialPageRoute(builder: (_) => HomeScreen(record: args));
       case RouteNames.historyScreen:
         return MaterialPageRoute(builder: (_) => const DenominationHistory());
       default:

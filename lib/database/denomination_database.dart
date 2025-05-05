@@ -19,7 +19,7 @@ class DenominationDatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 2, // Update the version when adding new fields
+      version: 2,
       onCreate: (db, version) {
         return db.execute('''
           CREATE TABLE records(
@@ -42,18 +42,20 @@ class DenominationDatabaseHelper {
   }
 
   static Future<void> insertRecord(DenominationDataModel record) async {
+    print("Insert is called");
     final dbClient = await db;
     await dbClient.insert('records', record.toMap());
   }
 
-  static Future<void> updateRecord(DenominationDataModel record) async {
+  static Future<bool> updateRecord(DenominationDataModel record) async {
     final dbClient = await db;
-    await dbClient.update(
+    final rowsUpdated = await dbClient.update(
       'records',
       record.toMap(),
       where: 'id = ?',
       whereArgs: [record.id],
     );
+    return rowsUpdated > 0;
   }
 
   static Future<List<DenominationDataModel>> getRecords() async {

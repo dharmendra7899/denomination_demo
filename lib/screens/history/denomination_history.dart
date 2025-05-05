@@ -94,7 +94,7 @@ class _DenominationHistoryState extends State<DenominationHistory> {
                     child: PopupMenuButton<String>(
                       onSelected: (value) {
                         if (value == 'edit') {
-                          Navigator.pushReplacementNamed(
+                          Navigator.popAndPushNamed(
                             context,
                             RouteNames.dashboardScreen,
                             arguments: record,

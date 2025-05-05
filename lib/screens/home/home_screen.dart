@@ -20,6 +20,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  TextEditingController fileNameController = TextEditingController();
+
   final List<TextEditingController> _controllers = [];
   final List<int> noteList = [2000, 500, 200, 100, 50, 20, 10];
   double total = 0;
@@ -42,7 +44,8 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         showTitle = false;
         isEditing = true;
-        editingId = widget.record!.id;
+        editingId = widget.record?.id;
+        fileNameController.text = widget.record?.fileName ?? "";
       });
     }
   }
@@ -117,7 +120,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  saveData(String fileName) {
+  saveData() {
     return showDialog(
       context: context,
       builder: (context) {
@@ -128,22 +131,27 @@ class _HomeScreenState extends State<HomeScreen> {
             borderRadius: BorderRadius.circular(12),
           ),
           title: Text("Enter File Name", style: context.textTheme.bodyLarge),
-          content: TextField(
-            onChanged: (val) => fileName = val,
+          content: TextFormField(
+            controller: fileNameController,
             decoration: InputDecoration(hintText: "file name"),
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return "file nane is required";
+              }
+              return null;
+            },
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text("Cancel"),
+              child: Text(texts.cancel),
             ),
             TextButton(
               onPressed: () async {
-                if (fileName.trim().isEmpty) return;
-
+                if (fileNameController.text.isEmpty) return;
                 final record = DenominationDataModel(
                   totalAmount: total,
-                  fileName: fileName.trim(),
+                  fileName: fileNameController.text.trim(),
                   timestamp: DateTime.now().toString(),
                   noteQuantities:
                       _controllers
@@ -153,18 +161,37 @@ class _HomeScreenState extends State<HomeScreen> {
                           .toList(),
                 );
 
-                if (isEditing) {
-                  await DenominationDatabaseHelper.updateRecord(record);
+                if (isEditing == true) {
+                  final recordData = DenominationDataModel(
+                    id: widget.record?.id,
+                    totalAmount: total,
+                    fileName: fileNameController.text.trim(),
+                    timestamp: DateTime.now().toString(),
+                    noteQuantities:
+                        _controllers
+                            .map(
+                              (controller) =>
+                                  int.tryParse(controller.text) ?? 0,
+                            )
+                            .toList(),
+                  );
+                  await DenominationDatabaseHelper.updateRecord(
+                    recordData,
+                  ).then((value) {
+                    loadRecord(recordData);
+                    _clearAllEntries();
+                  });
                 } else {
                   await DenominationDatabaseHelper.insertRecord(
                     record,
                   ).then((value) => _clearAllEntries());
                 }
-
                 if (context.mounted) {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("Data saved as $fileName")),
+                    SnackBar(
+                      content: Text("Data saved as ${fileNameController.text}"),
+                    ),
                   );
                 }
               },
@@ -183,16 +210,18 @@ class _HomeScreenState extends State<HomeScreen> {
       floatingActionButton: PopupMenuButton<String>(
         onSelected: (value) {
           if (value == 'save') {
-            String fileName = '';
-            saveData(fileName);
+            saveData();
           } else if (value == 'clear') {
             _clearAllEntries();
           }
         },
         itemBuilder:
             (context) => [
-              PopupMenuItem(value: 'save', child: Text('Save')),
-              PopupMenuItem(value: 'clear', child: Text('Clear Values')),
+              PopupMenuItem(
+                value: 'save',
+                child: Text(isEditing == true ? texts.update : texts.save),
+              ),
+              PopupMenuItem(value: 'clear', child: Text(texts.clear)),
             ],
         child: FloatingActionButton(
           backgroundColor: appColors.primary,

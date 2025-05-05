@@ -19,9 +19,7 @@ class DenominationDataModel {
       'totalAmount': totalAmount,
       'fileName': fileName,
       'timestamp': timestamp,
-      'noteQuantities': noteQuantities.join(
-        ',',
-      ), // Store as comma-separated string
+      'noteQuantities': noteQuantities.join(','),
     };
   }
 
