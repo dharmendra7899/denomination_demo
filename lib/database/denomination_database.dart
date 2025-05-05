@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:denomination/database/denomination_data_model.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
@@ -17,16 +19,24 @@ class DenominationDatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2, // Update the version when adding new fields
       onCreate: (db, version) {
         return db.execute('''
           CREATE TABLE records(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             totalAmount REAL,
             fileName TEXT,
-            timestamp TEXT
+            timestamp TEXT,
+            noteQuantities TEXT
           )
         ''');
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await db.execute(
+            'ALTER TABLE records ADD COLUMN noteQuantities TEXT',
+          );
+        }
       },
     );
   }
@@ -34,6 +44,16 @@ class DenominationDatabaseHelper {
   static Future<void> insertRecord(DenominationDataModel record) async {
     final dbClient = await db;
     await dbClient.insert('records', record.toMap());
+  }
+
+  static Future<void> updateRecord(DenominationDataModel record) async {
+    final dbClient = await db;
+    await dbClient.update(
+      'records',
+      record.toMap(),
+      where: 'id = ?',
+      whereArgs: [record.id],
+    );
   }
 
   static Future<List<DenominationDataModel>> getRecords() async {
@@ -48,5 +68,11 @@ class DenominationDatabaseHelper {
   static Future<void> deleteRecord(int id) async {
     final dbClient = await db;
     await dbClient.delete('records', where: 'id = ?', whereArgs: [id]);
+  }
+
+  static Future<void> deleteDB() async {
+    final dbPath = await getDatabasesPath();
+    final path = join(dbPath, 'records.db');
+    await deleteDatabase(path);
   }
 }

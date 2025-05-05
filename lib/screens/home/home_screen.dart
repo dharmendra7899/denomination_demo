@@ -11,7 +11,9 @@ import 'package:flutter/services.dart';
 import 'package:number_to_words/number_to_words.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final DenominationDataModel? record;
+
+  const HomeScreen({super.key, this.record});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -19,20 +21,57 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final List<TextEditingController> _controllers = [];
-  final List<int> noteValues = [2000, 500, 200, 100, 50, 20, 10];
+  final List<int> noteList = [2000, 500, 200, 100, 50, 20, 10];
   double total = 0;
   bool showTitle = true;
+  bool isEditing = false;
+  int? editingId;
 
   @override
   void initState() {
     super.initState();
     _controllers.addAll(
-      List.generate(noteValues.length, (_) => TextEditingController()),
+      List.generate(noteList.length, (_) => TextEditingController()),
     );
     for (var controller in _controllers) {
       controller.addListener(_recalculateTotal);
     }
+
+    if (widget.record != null) {
+      loadRecord(widget.record!);
+      setState(() {
+        showTitle = false;
+        isEditing = true;
+        editingId = widget.record!.id;
+      });
+    }
   }
+
+  void loadRecord(DenominationDataModel record) {
+    for (int i = 0; i < _controllers.length; i++) {
+      _controllers[i].text = record.noteQuantities[i].toString();
+    }
+    _recalculateTotal();
+  }
+
+  //
+  // @override
+  // void didChangeDependencies() {
+  //   super.didChangeDependencies();
+  //   final record =
+  //       ModalRoute.of(context)?.settings.arguments as DenominationDataModel?;
+  //   if (record != null) {
+  //     WidgetsBinding.instance.addPostFrameCallback((_) {
+  //       setState(() {
+  //         for (int i = 0; i < _controllers.length; i++) {
+  //           _controllers[i].text = record.noteQuantities[i].toString();
+  //         }
+  //         _recalculateTotal();
+  //         showTitle = false;
+  //       });
+  //     });
+  //   }
+  // }
 
   @override
   void dispose() {
@@ -46,7 +85,7 @@ class _HomeScreenState extends State<HomeScreen> {
     double sum = 0;
     for (int i = 0; i < _controllers.length; i++) {
       final qty = int.tryParse(_controllers[i].text) ?? 0;
-      sum += noteValues[i] * qty;
+      sum += noteList[i] * qty;
     }
     setState(() {
       total = sum;
@@ -57,11 +96,15 @@ class _HomeScreenState extends State<HomeScreen> {
     for (var controller in _controllers) {
       controller.clear();
     }
+    setState(() {
+      isEditing = false;
+      editingId = null;
+    });
     _recalculateTotal();
   }
 
   String _convertToWords(int amount) {
-    if (amount == 0) return "zero rupees";
+    if (amount == 0) return "no data";
     String words = NumberToWord().convert('en-in', amount);
     return "${words[0].toUpperCase()}${words.substring(1)} rupees";
   }
@@ -97,14 +140,27 @@ class _HomeScreenState extends State<HomeScreen> {
             TextButton(
               onPressed: () async {
                 if (fileName.trim().isEmpty) return;
+
                 final record = DenominationDataModel(
                   totalAmount: total,
                   fileName: fileName.trim(),
                   timestamp: DateTime.now().toString(),
+                  noteQuantities:
+                      _controllers
+                          .map(
+                            (controller) => int.tryParse(controller.text) ?? 0,
+                          )
+                          .toList(),
                 );
-                await DenominationDatabaseHelper.insertRecord(
-                  record,
-                ).then((value) => _clearAllEntries());
+
+                if (isEditing) {
+                  await DenominationDatabaseHelper.updateRecord(record);
+                } else {
+                  await DenominationDatabaseHelper.insertRecord(
+                    record,
+                  ).then((value) => _clearAllEntries());
+                }
+
                 if (context.mounted) {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -112,7 +168,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   );
                 }
               },
-              child: Text("Save"),
+              child: Text(texts.save),
             ),
           ],
         );
@@ -153,6 +209,7 @@ class _HomeScreenState extends State<HomeScreen> {
             centerTitle: false,
             pinned: true,
             floating: true,
+            leading: SizedBox(),
             backgroundColor: Colors.transparent,
             actions: [
               PopupMenuButton<String>(
@@ -205,7 +262,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 padding: EdgeInsets.symmetric(vertical: 16),
                 shrinkWrap: true,
                 physics: NeverScrollableScrollPhysics(),
-                itemCount: noteValues.length,
+                itemCount: noteList.length,
                 separatorBuilder: (_, __) => SizedBox(height: 16),
                 itemBuilder: (context, index) {
                   return Padding(
@@ -216,7 +273,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         SizedBox(
                           width: 100,
                           child: Text(
-                            Utils.formatCurrency(noteValues[index]),
+                            Utils.formatCurrency(noteList[index]),
                             style: context.textTheme.bodyMedium,
                           ),
                         ),
@@ -275,7 +332,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         Text(
                           Utils.formatCurrency(
                             (int.tryParse(_controllers[index].text) ?? 0) *
-                                noteValues[index],
+                                noteList[index],
                           ),
                           style: context.textTheme.bodyMedium,
                         ),

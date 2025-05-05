@@ -25,7 +25,11 @@ class _SplashScreenState extends State<SplashScreen>
   _navigation() async {
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
-        Navigator.popAndPushNamed(context, RouteNames.dashboardScreen);
+        Navigator.popAndPushNamed(
+          context,
+          RouteNames.dashboardScreen,
+          arguments: null,
+        );
       }
     });
   }

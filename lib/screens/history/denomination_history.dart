@@ -2,6 +2,7 @@ import 'package:denomination/constants/context_extension.dart';
 import 'package:denomination/constants/texts.dart';
 import 'package:denomination/database/denomination_data_model.dart';
 import 'package:denomination/database/denomination_database.dart';
+import 'package:denomination/routes/routes_names.dart';
 import 'package:denomination/theme/colors.dart';
 import 'package:denomination/utils/utils.dart';
 import 'package:flutter/material.dart';
@@ -27,7 +28,9 @@ class _DenominationHistoryState extends State<DenominationHistory> {
             return Center(child: CircularProgressIndicator());
           }
           final records = snapshot.data!;
-          if (records.isEmpty) return Center(child: Text("No saved records"));
+          if (records.isEmpty) {
+            return Center(child: Text("No saved records found!"));
+          }
           return ListView.separated(
             itemCount: records.length,
             itemBuilder: (context, index) {
@@ -91,9 +94,9 @@ class _DenominationHistoryState extends State<DenominationHistory> {
                     child: PopupMenuButton<String>(
                       onSelected: (value) {
                         if (value == 'edit') {
-                          Navigator.pushNamed(
+                          Navigator.pushReplacementNamed(
                             context,
-                            '/edit',
+                            RouteNames.dashboardScreen,
                             arguments: record,
                           );
                         } else if (value == 'delete') {
@@ -163,12 +166,25 @@ class _DenominationHistoryState extends State<DenominationHistory> {
     final formattedDate = DateFormat("MMM dd yyyy").format(dateTime);
     final formattedTime = DateFormat("hh:mma").format(dateTime).toLowerCase();
 
+    final denominations = [2000, 500, 200, 100, 50, 20, 10];
+
+    String noteDetails = '';
+    for (int i = 0; i < denominations.length; i++) {
+      final count =
+          (i < record.noteQuantities.length) ? record.noteQuantities[i] : 0;
+      if (count > 0) {
+        noteDetails += '₹${denominations[i]} = $count, \n';
+      }
+    }
+    if (noteDetails.endsWith(', ')) {
+      noteDetails = noteDetails.substring(0, noteDetails.length - 2);
+    }
     final message = '''
-💰 *File Name*: ${record.fileName}
-📅 *Date*: $formattedDate
-🕒 *Time*: $formattedTime
-📊 *Total Amount*: ₹${record.totalAmount}
-''';
+ Date: $formattedDate
+ Time: $formattedTime
+ Total Amount: ₹${record.totalAmount}
+ $noteDetails
+  ''';
 
     Share.share(message);
   }
